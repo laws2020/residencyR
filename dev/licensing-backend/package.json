@@ -1,0 +1,12 @@
+{
+  "name": "residencyr-licensing-backend",
+  "version": "1.0.0",
+  "description": "Reference backend for residencyR license issuance: Paystack verification, webhook handling, RSA license signing. Deploy this yourself -- it is not hosted anywhere by default.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

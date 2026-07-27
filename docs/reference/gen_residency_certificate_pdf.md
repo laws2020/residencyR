@@ -1,0 +1,43 @@
+# Generate a data residency certificate as a PDF
+
+Generate a data residency certificate as a PDF
+
+## Usage
+
+``` r
+gen_residency_certificate_pdf(audit, flagged, bank_name, output_file, rows_per_page, regulation)
+```
+
+## Arguments
+
+- audit:
+
+  A data.frame as returned by \[scan_data_residency()\].
+
+- flagged:
+
+  A data.frame as returned by \[flag_offshore_calls()\].
+
+- bank_name:
+
+  Character. Name to appear on the certificate.
+
+- output_file:
+
+  Character. Path to write the PDF to.
+
+- rows_per_page:
+
+  Integer. Max audit rows drawn per page on continuation pages (page 1
+  fits fewer, since it also carries the stats, charts, and executive
+  summary). Default 20.
+
+- regulation:
+
+  A list with \`citation\` and \`deadline_text\`, as used by
+  \[build_executive_summary()\]. Defaults to the CBN 2027 data
+  localization circular.
+
+## Value
+
+Invisibly, \`output_file\`.

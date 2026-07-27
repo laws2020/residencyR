@@ -1,0 +1,46 @@
+on:
+  push:
+    branches: [main, master]
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+name: pkgdown
+
+jobs:
+  pkgdown:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::pkgdown, local::.
+          needs: website
+
+      - name: Build pkgdown site
+        run: pkgdown::build_site(override = list(destination = "docs"), install = FALSE)
+        shell: Rscript {0}
+
+      - name: Assemble deploy folder (custom homepage at root, pkgdown docs at /docs)
+        run: |
+          mkdir -p _site_deploy
+          cp site/index.html _site_deploy/index.html
+          cp -r docs _site_deploy/docs
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          clean: true
+          branch: gh-pages
+          folder: _site_deploy

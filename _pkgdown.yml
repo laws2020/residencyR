@@ -1,0 +1,79 @@
+url: https://laws2020.github.io/residencyR/
+
+template:
+  bootstrap: 5
+  bslib:
+    base_font: {google: "IBM Plex Sans"}
+    heading_font: {google: "Source Serif 4"}
+    code_font: {google: "IBM Plex Mono"}
+    primary: "#1F3D2B"
+    bg: "#FBF9F4"
+    fg: "#1A2238"
+    border-radius: 0.25rem
+    danger: "#C77D2E"
+    success: "#3F7A4F"
+
+navbar:
+  title: "residencyR"
+  structure:
+    left: [intro, reference, articles]
+    right: [search, github]
+  components:
+    articles:
+      text: Vignette
+      href: articles/residencyR.html
+
+home:
+  title: "residencyR — data residency auditing and compliance reporting"
+  description: >
+    Registry-driven residency auditing across database, API, backup,
+    and vendor data sources, with a compliance-ready certificate output
+    against a configurable regulatory citation and deadline.
+
+reference:
+  - title: "Run an audit"
+    desc: "The main workflow: scan, flag, certify."
+    contents:
+      - scan_data_residency
+      - flag_offshore_calls
+      - gen_residency_certificate
+      - gen_residency_certificate_pdf
+  - title: "Ingest real data"
+    desc: "Get infrastructure data into the audit pipeline."
+    contents:
+      - ingest_csv_inventory
+      - scan_from_csv
+      - generate_csv_template
+  - title: "Scan raw code (candidate findings)"
+    desc: "Regex-based discovery from Terraform/config files -- unverified, for triage into a CSV inventory."
+    contents:
+      - scan_source_files
+  - title: "Individual scan sources"
+    desc: "The building blocks scan_data_residency() dispatches to -- callable directly if you only need one."
+    contents:
+      - scan_source_db
+      - scan_source_api_logs
+      - scan_source_backups
+      - scan_source_third_party_calls
+  - title: "Registry"
+    desc: "Register and inspect scan sources."
+    contents:
+      - register_residency_source
+      - list_residency_sources
+
+  - title: "License Management"
+    desc: "Install and verify residencyR licenses."
+    contents:
+      - install_license
+      - verify_license
+
+  - title: "Internals"
+    desc: "Shared classification and reporting logic."
+    contents:
+      - classify_jurisdiction
+      - build_executive_summary
+articles:
+  - title: "Get started"
+    contents:
+      - residencyR
+      - data-sourcing-guide

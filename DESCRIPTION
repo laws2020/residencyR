@@ -1,0 +1,29 @@
+Package: residencyR
+Type: Package
+Title: Data Residency Auditing and Compliance Reporting
+Version: 0.1.0
+Author: Lawrence Daniel Garba
+Maintainer: Lawrence Daniel Garba <laws.garba@gmail.com>
+URL: https://laws2020.github.io/residencyR, https://github.com/laws2020/residencyR
+BugReports: https://github.com/laws2020/residencyR/issues
+Description: Audits where infrastructure and transaction data physically
+    resides, flags offshore exposure, and generates compliance
+    certificates against a configurable regulatory citation and
+    deadline (defaults to Nigeria's CBN payment data localization
+    circular). The audit engine (scanning, classification, ingestion)
+    has no dependency beyond base R. Certificate generation is
+    commercially licensed and additionally requires 'openssl' for
+    signature verification.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.1
+Imports:
+    openssl,
+    tools
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Config/testthat/edition: 3
