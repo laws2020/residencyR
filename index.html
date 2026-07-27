@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>residencyR — Data Residency Auditing for R</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0E1912;
+    --ink-2: #16281B;
+    --ink-line: #223528;
+    --paper: #FAF9F5;
+    --paper-dim: #F1EFE6;
+    --line: #E3DFD1;
+    --brand: #1F3D2B;
+    --brand-bright: #3FA463;
+    --text: #1A2218;
+    --text-soft: #5C6B5F;
+    --text-on-dark: #E9EEE9;
+    --text-on-dark-soft: #93A697;
+    --local: #3F7A4F;
+    --local-bg: #E7F0E9;
+    --offshore: #B3261E;
+    --offshore-bg: #FBE7E5;
+    --unknown: #A9A38C;
+    --unknown-bg: #EFEDE5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', sans-serif; font-weight: 700; letter-spacing: -0.01em; }
+  code, .mono { font-family: 'IBM Plex Mono', monospace; }
+  a { color: inherit; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 40px; }
+  section { padding: 96px 0; }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; letter-spacing: 0.14em;
+    text-transform: uppercase; font-weight: 600; margin-bottom: 18px;
+  }
+
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.in { opacity: 1; transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    * { animation: none !important; }
+  }
+
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(14,25,18,0.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--ink-line);
+    padding: 16px 40px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.15rem; color: var(--text-on-dark); display: flex; align-items: baseline; gap: 8px; }
+  .brand .tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--brand-bright); border: 1px solid var(--brand-bright); padding: 2px 6px; border-radius: 3px; }
+  nav ul { list-style: none; display: flex; gap: 28px; align-items: center; }
+  nav a { text-decoration: none; font-size: 0.87rem; color: var(--text-on-dark-soft); font-weight: 500; }
+  nav a:hover { color: var(--text-on-dark); }
+  .nav-cta { background: var(--brand-bright); color: var(--ink) !important; padding: 7px 16px; border-radius: 4px; font-weight: 600 !important; }
+
+  .hero { background: var(--ink); color: var(--text-on-dark); padding: 88px 0 100px; overflow: hidden; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
+  .hero .eyebrow { color: var(--brand-bright); }
+  .hero h1 { font-size: 3rem; line-height: 1.08; margin-bottom: 22px; }
+  .hero h1 .accent { color: var(--brand-bright); }
+  .hero p.lede { font-size: 1.1rem; color: var(--text-on-dark-soft); max-width: 46ch; margin-bottom: 32px; }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 44px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 4px; font-weight: 600; font-size: 0.94rem; text-decoration: none; border: 1.5px solid var(--brand-bright); }
+  .btn-primary { background: var(--brand-bright); color: var(--ink); }
+  .btn-secondary { color: var(--text-on-dark); border-color: var(--ink-line); }
+  .stat-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; border-top: 1px solid var(--ink-line); padding-top: 28px; }
+  .stat-strip .stat strong { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; color: var(--brand-bright); }
+  .stat-strip .stat span { font-size: 0.78rem; color: var(--text-on-dark-soft); }
+
+  .demo-panel { background: var(--ink-2); border: 1px solid var(--ink-line); border-radius: 8px; overflow: hidden; box-shadow: 0 30px 70px -30px rgba(0,0,0,0.6); }
+  .demo-bar { display: flex; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--ink-line); }
+  .demo-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-line); }
+  .terminal { padding: 20px 22px; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.85; min-height: 168px; }
+  .terminal .c1 { color: #6E8577; }
+  .terminal .c2 { color: #E0B15C; }
+  .terminal .prompt { color: var(--brand-bright); }
+  .type-line { opacity: 0; white-space: pre; animation: reveal-line 0.4s ease forwards; }
+  @keyframes reveal-line { to { opacity: 1; } }
+  .cursor { display: inline-block; width: 6px; height: 13px; background: var(--brand-bright); vertical-align: -2px; animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .cert-mini { border-top: 1px dashed var(--ink-line); padding: 18px 22px 22px; opacity: 0; animation: cert-in 0.6s ease forwards; animation-delay: 2.6s; }
+  @keyframes cert-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .cert-mini-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .cert-mini-head .t { font-family: 'Space Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--text-on-dark); }
+  .cert-mini-head .v { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--offshore); font-weight: 600; background: rgba(179,38,30,0.15); padding: 2px 8px; border-radius: 3px; }
+  .cert-mini-body { display: grid; grid-template-columns: 88px 1fr; gap: 18px; align-items: center; }
+  .donut { position: relative; width: 88px; height: 88px; border-radius: 50%; background: conic-gradient(var(--local) 0deg 120deg, var(--offshore) 120deg 300deg, var(--unknown) 300deg 360deg); }
+  .donut::after { content: "33%"; position: absolute; inset: 16px; background: var(--ink-2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--text-on-dark); font-weight: 600; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .bar-row .lbl { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--text-on-dark-soft); width: 96px; text-align: right; flex-shrink: 0; }
+  .bar-row .track { background: var(--ink-line); border-radius: 2px; height: 7px; flex: 1; overflow: hidden; }
+  .bar-row .fill { background: var(--brand-bright); height: 100%; border-radius: 2px; }
+
+  .section-head { max-width: 62ch; margin-bottom: 48px; }
+  .section-head h2 { font-size: 2rem; margin-bottom: 14px; }
+  .section-head p { color: var(--text-soft); font-size: 1.03rem; }
+  section.dark .section-head h2, section.dark .section-head p { color: var(--text-on-dark); }
+  section.dark .section-head p { color: var(--text-on-dark-soft); }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .feature-card { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 26px; }
+  .feature-card .icon { width: 34px; height: 34px; border-radius: 7px; background: var(--brand); color: white; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-weight: 700; margin-bottom: 16px; font-size: 0.9rem; }
+  .feature-card h3 { font-size: 1.02rem; margin-bottom: 8px; font-family: 'Inter', sans-serif; font-weight: 700; }
+  .feature-card p { font-size: 0.9rem; color: var(--text-soft); }
+
+  .code-block { background: var(--ink); color: #DCE6DE; border-radius: 8px; padding: 26px 28px; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; line-height: 1.8; overflow-x: auto; }
+  .code-block .c1 { color: #6E8577; }
+  .code-block .c2 { color: #E0B15C; }
+  .code-block .c3 { color: var(--brand-bright); }
+
+  .anatomy { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 8px; overflow-x: auto; }
+  .anatomy-row { display: grid; grid-template-columns: 130px 90px 120px 110px 110px 100px; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; min-width: 660px; }
+  .anatomy-row > div { padding: 14px 12px; border-bottom: 1px solid var(--paper-dim); }
+  .anatomy-row.head > div { font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.62rem; border-bottom: 1.5px solid var(--line); }
+  .anatomy-row:last-child > div { border-bottom: none; }
+  .chip { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 600; }
+  .chip.local { background: var(--local-bg); color: var(--local); }
+  .chip.offshore { background: var(--offshore-bg); color: var(--offshore); }
+  .chip.unknown { background: var(--unknown-bg); color: #7A745E; }
+
+  .path-card { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 28px; margin-bottom: 20px; }
+  .path-card-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+  .path-num { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 700; color: var(--brand-bright); background: var(--brand); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .path-card h3 { font-size: 1.05rem; }
+  .caution { background: var(--offshore-bg); border: 1px solid var(--offshore); border-radius: 6px; padding: 14px 16px; margin-top: 14px; font-size: 0.85rem; color: var(--offshore); font-weight: 500; }
+  .caution strong { display: block; margin-bottom: 3px; }
+
+  .report-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .report-card { background: white; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .report-card .rc-head { background: var(--paper-dim); padding: 14px 20px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.92rem; border-bottom: 1px solid var(--line); }
+  .report-card .rc-body { padding: 20px; font-size: 0.88rem; color: var(--text-soft); }
+  .report-card .rc-body code { font-size: 0.78rem; background: var(--paper-dim); padding: 2px 5px; border-radius: 3px; }
+  .rc-tags { display: flex; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
+  .rc-tags span { font-family: 'IBM Plex Mono', monospace; font-size: 0.64rem; background: var(--local-bg); color: var(--local); padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+
+  .verdict-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .verdict-card { border-radius: 8px; padding: 22px; border: 1.5px solid; }
+  .verdict-card.ok { background: var(--local-bg); border-color: var(--local); }
+  .verdict-card.bad { background: var(--offshore-bg); border-color: var(--offshore); }
+  .verdict-card.unk { background: var(--unknown-bg); border-color: var(--unknown); }
+  .verdict-card .vtitle { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; }
+  .verdict-card.ok .vtitle { color: var(--local); }
+  .verdict-card.bad .vtitle { color: var(--offshore); }
+  .verdict-card.unk .vtitle { color: #7A745E; }
+  .verdict-card p { font-size: 0.85rem; color: var(--text-soft); }
+
+  .limit-list { display: flex; flex-direction: column; }
+  .limit-item { display: grid; grid-template-columns: 26px 1fr; gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--ink-line); }
+  .limit-item:first-child { border-top: 1px solid var(--ink-line); }
+  .limit-item .mark { color: var(--offshore); font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+  .limit-item h3 { font-size: 0.98rem; color: var(--text-on-dark); margin-bottom: 5px; font-family: 'Inter', sans-serif; }
+  .limit-item p { font-size: 0.88rem; color: var(--text-on-dark-soft); max-width: 68ch; }
+
+  footer { background: var(--ink); border-top: 1px solid var(--ink-line); padding: 56px 0 36px; color: var(--text-on-dark-soft); }
+  .footer-notice { background: rgba(179,38,30,0.12); border: 1px solid rgba(179,38,30,0.4); border-radius: 6px; padding: 16px 20px; font-size: 0.85rem; color: #F0B8B4; margin-bottom: 36px; max-width: 72ch; }
+  .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 40px; }
+  .footer-grid h4 { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-on-dark); margin-bottom: 14px; }
+  .footer-grid ul { list-style: none; }
+
+  /* ---------- PRICING ---------- */
+  .billing-toggle { display: inline-flex; background: white; border: 1px solid var(--line); border-radius: 30px; padding: 4px; margin-bottom: 40px; }
+  .billing-toggle button { border: none; background: none; padding: 9px 20px; border-radius: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; font-weight: 600; cursor: pointer; color: var(--text-soft); }
+  .billing-toggle button.active { background: var(--brand); color: white; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .price-card { background: white; border: 1.5px solid var(--line); border-radius: 10px; padding: 30px; display: flex; flex-direction: column; }
+  .price-card.featured { border-color: var(--brand-bright); box-shadow: 0 20px 50px -25px rgba(63,164,99,0.35); position: relative; }
+  .price-card.featured::before { content: "MOST COMMON"; position: absolute; top: -12px; left: 24px; background: var(--brand-bright); color: white; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.05em; }
+  .price-card h3 { font-size: 1.05rem; margin-bottom: 6px; }
+  .price-card .price-sub { font-size: 0.82rem; color: var(--text-soft); margin-bottom: 18px; }
+  .price-card .amount { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; font-weight: 700; color: var(--brand); }
+  .price-card .amount .per { font-size: 0.85rem; font-weight: 500; color: var(--text-soft); font-family: 'Inter', sans-serif; }
+  .price-card ul { list-style: none; margin: 20px 0 24px; flex: 1; }
+  .price-card li { font-size: 0.85rem; color: var(--text-soft); padding: 7px 0; padding-left: 20px; position: relative; }
+  .price-card li::before { content: "✓"; position: absolute; left: 0; color: var(--brand-bright); font-weight: 700; }
+  .price-card .btn { width: 100%; justify-content: center; border-color: var(--brand); }
+  .price-card .btn-primary { background: var(--brand); border-color: var(--brand); color: white; }
+  .price-note { text-align: center; font-size: 0.82rem; color: var(--text-soft); margin-top: 28px; }
+
+  .install-cta { background: var(--paper-dim); border: 1px solid var(--line); border-radius: 10px; padding: 32px; display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 48px; flex-wrap: wrap; }
+  .install-cta h3 { font-size: 1.1rem; margin-bottom: 6px; }
+  .install-cta p { font-size: 0.9rem; color: var(--text-soft); }
+  .install-cta .phone { font-family: 'IBM Plex Mono', monospace; font-size: 1.3rem; font-weight: 700; color: var(--brand); white-space: nowrap; }
+  .install-cta .phone span { display: block; font-size: 0.68rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+
+  .services-table { width: 100%; max-width: 620px; margin: 0 auto; border-collapse: collapse; background: white; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .services-table th, .services-table td { padding: 13px 20px; text-align: left; font-size: 0.88rem; border-bottom: 1px solid var(--paper-dim); }
+  .services-table th { background: var(--paper-dim); font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--brand); }
+  .services-table td:last-child, .services-table th:last-child { text-align: right; font-family: 'IBM Plex Mono', monospace; color: var(--text-soft); }
+  .services-table tr:last-child td { border-bottom: none; }
+
+  .liability-note { background: var(--paper-dim); border-left: 3px solid var(--brand); border-radius: 4px; padding: 18px 22px; font-size: 0.85rem; color: var(--text-soft); max-width: 78ch; margin: 28px auto 0; }
+
+  .data-request-card { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 30px 32px; max-width: 800px; margin: 0 auto; }
+  .data-request-card h4 { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; margin-bottom: 4px; }
+  .data-request-card .dr-sub { font-size: 0.85rem; color: var(--text-soft); margin-bottom: 20px; }
+  .data-request-card ol { margin: 0 0 20px 20px; }
+  .data-request-card li { font-size: 0.87rem; color: var(--text); margin-bottom: 12px; line-height: 1.5; }
+  .data-request-card li strong { color: var(--brand); }
+  .dr-protocol { background: var(--paper-dim); border-radius: 6px; padding: 16px 18px; font-size: 0.84rem; color: var(--text-soft); margin-bottom: 18px; }
+  .dr-protocol strong { color: var(--text); display: block; margin-bottom: 4px; }
+  .dr-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .copy-btn { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; background: var(--brand); color: white; border: none; padding: 10px 18px; border-radius: 5px; cursor: pointer; font-weight: 600; }
+  .copy-btn:hover { background: var(--brand-bright); }
+
+  @media (max-width: 900px) {
+    .pricing-grid { grid-template-columns: 1fr; }
+    .install-cta { flex-direction: column; text-align: center; }
+  }
+  .footer-grid li { margin-bottom: 9px; font-size: 0.87rem; }
+  .footer-grid a { text-decoration: none; color: var(--text-on-dark-soft); }
+  .footer-grid a:hover { color: var(--text-on-dark); }
+  .footer-bottom { border-top: 1px solid var(--ink-line); padding-top: 24px; font-size: 0.8rem; font-family: 'IBM Plex Mono', monospace; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (max-width: 900px) {
+    .wrap { padding: 0 22px; }
+    .hero-grid { grid-template-columns: 1fr; }
+    .stat-strip { grid-template-columns: repeat(2,1fr); }
+    .feature-grid, .verdict-row, .report-compare { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+    nav ul { display: none; }
+    .hero h1 { font-size: 2.1rem; }
+  }
+  a:focus-visible, .btn:focus-visible { outline: 2px solid var(--brand-bright); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">residencyR <span class="tag">v0.1.0</span></div>
+  <ul>
+    <li><a href="#why">Why</a></li>
+    <li><a href="#quickstart">Quick start</a></li>
+    <li><a href="#data-in">Data in</a></li>
+    <li><a href="#reports">Reports</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#limitations">Limitations</a></li>
+    <li><a href="/docs/index.html">Docs ↗</a></li>
+    <li><a href="https://github.com/laws2020/residencyR" target="_blank" rel="noopener" class="nav-cta">GitHub ↗</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Infosights Consulting · Compliance Assessment Platform</div>
+      <h1>Prove your data residency position <span class="accent">before examiners do.</span></h1>
+      <p class="lede">Infosights provides a Data Residency Compliance Assessment Platform that automates evidence collection and readiness reporting for financial institutions preparing for CBN's data localization deadline.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="#quickstart">Get started →</a>
+        <a class="btn btn-secondary" href="#reports">See a sample report</a>
+      </div>
+      <div class="stat-strip">
+        <div class="stat"><strong>Jan 2027</strong><span>CBN deadline</span></div>
+        <div class="stat"><strong>100%</strong><span>offline &amp; on-premise</span></div>
+        <div class="stat"><strong>~1s</strong><span>per 5,000 assets scanned</span></div>
+        <div class="stat"><strong>4</strong><span>infrastructure sources covered</span></div>
+      </div>
+    </div>
+
+    <div class="demo-panel">
+      <div class="demo-bar"><span class="demo-dot"></span><span class="demo-dot"></span><span class="demo-dot"></span></div>
+      <div class="terminal" id="terminal">
+        <div class="type-line" style="animation-delay:0.1s"><span class="prompt">&gt;</span> <span class="c1"># 1. get a starter file</span></div>
+        <div class="type-line" style="animation-delay:0.5s">generate_csv_template(<span class="c2">"inventory.csv"</span>)</div>
+        <div class="type-line" style="animation-delay:1.0s"><span class="prompt">&gt;</span> <span class="c1"># 2. ingest, scan, flag</span></div>
+        <div class="type-line" style="animation-delay:1.4s">audit   &lt;- scan_from_csv(<span class="c2">"inventory.csv"</span>)</div>
+        <div class="type-line" style="animation-delay:1.8s">flagged &lt;- flag_offshore_calls(audit)</div>
+        <div class="type-line" style="animation-delay:2.2s"><span class="prompt">&gt;</span> <span class="c1"># 3. produce the certificate</span><span class="cursor"></span></div>
+      </div>
+      <div class="cert-mini">
+        <div class="cert-mini-head">
+          <span class="t">Data Residency Audit Report</span>
+          <span class="v">NON-COMPLIANT</span>
+        </div>
+        <div class="cert-mini-body">
+          <div class="donut"></div>
+          <div>
+            <div class="bar-row"><span class="lbl">[db]</span><div class="track"><div class="fill" style="width:70%"></div></div></div>
+            <div class="bar-row"><span class="lbl">[api_logs]</span><div class="track"><div class="fill" style="width:45%"></div></div></div>
+            <div class="bar-row"><span class="lbl">[backups]</span><div class="track"><div class="fill" style="width:30%"></div></div></div>
+            <div class="bar-row"><span class="lbl">[third_party_calls]</span><div class="track"><div class="fill" style="width:22%"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow" style="color:var(--brand)">Why residencyR</div>
+      <h2>Built to be trusted on infrastructure you can't risk.</h2>
+      <p>Every claim below is something we tested, not something we assumed.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card reveal"><div class="icon">0</div><h3>Zero-dependency audit engine</h3><p>Scanning, classification, and ingestion run on base R — grDevices, graphics, utils. Nothing else to install to run an audit. Certificate generation is commercially licensed and additionally requires <code>openssl</code> for signature verification.</p></div>
+      <div class="feature-card reveal"><div class="icon">⌁</div><h3>Runs fully offline</h3><p>No network calls, no live database connections, no API credentials. Point it at a CSV on an air-gapped laptop and it works exactly the same.</p></div>
+      <div class="feature-card reveal"><div class="icon">⚡</div><h3>Fast at real scale</h3><p>A full audit — ingest, scan, flag, PDF with charts — completes in about a second on 5,000 assets, far beyond any single institution's realistic inventory.</p></div>
+      <div class="feature-card reveal"><div class="icon">＋</div><h3>Extensible by design</h3><p>New data sources register themselves into a shared dispatch registry. Adding a fifth source never means touching the first four.</p></div>
+      <div class="feature-card reveal"><div class="icon">?</div><h3>Honest about uncertainty</h3><p>Mixed signals classify as <code>"unknown"</code>, never an automatic pass. Scanner failures surface on the certificate itself — never a silently smaller audit.</p></div>
+      <div class="feature-card reveal"><div class="icon">§</div><h3>Regulator-agnostic</h3><p>The regulatory citation and deadline are parameters, not assumptions baked into the code. Built for CBN 2027 — not limited to it.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="quickstart" style="background:var(--paper-dim)">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow" style="color:var(--brand)">Quick start</div>
+      <h2>The whole workflow in five lines.</h2>
+      <p>This isn't a simplified demo — it's the literal, complete workflow. Point it at real data and it produces a real result.</p>
+    </div>
+    <div class="code-block reveal">
+<span class="c1"># install</span><br>
+remotes::install_github(<span class="c2">"laws2020/residencyR"</span>)<br><br>
+<span class="c1"># 1. get a starter file</span><br>
+generate_csv_template(<span class="c2">"inventory.csv"</span>)<br><br>
+<span class="c1"># 2. ingest, scan, and flag what needs review</span><br>
+audit   <span class="c3">&lt;-</span> scan_from_csv(<span class="c2">"inventory.csv"</span>)<br>
+flagged <span class="c3">&lt;-</span> flag_offshore_calls(audit)<br><br>
+<span class="c1"># 3. produce a board-ready certificate</span><br>
+gen_residency_certificate_pdf(audit, flagged,<br>
+&nbsp;&nbsp;bank_name = <span class="c2">"Example Bank Plc"</span>,<br>
+&nbsp;&nbsp;output_file = <span class="c2">"certificate.pdf"</span>)
+    </div>
+  </div>
+</section>
+
+<section id="concepts">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow" style="color:var(--brand)">Core concepts</div>
+      <h2>One row shape, four sources, three verdicts.</h2>
+      <p>Every scan source returns the same schema — this is what makes the whole package composable.</p>
+    </div>
+    <div class="anatomy reveal">
+      <div class="anatomy-row head"><div>source</div><div>item</div><div>location</div><div>jurisdiction</div><div>provider</div><div>status</div></div>
+      <div class="anatomy-row"><div>[db]</div><div>core_banking_db</div><div>Lagos-NG</div><div><span class="chip local">local</span></div><div>MainOne</div><div>ok</div></div>
+      <div class="anatomy-row"><div>[api_logs]</div><div>fraud_scoring_api</div><div>eu-west-1</div><div><span class="chip offshore">offshore</span></div><div>AWS</div><div>flagged</div></div>
+      <div class="anatomy-row"><div>[backups]</div><div>dr_snapshot</div><div>Unknown Region</div><div><span class="chip unknown">unknown</span></div><div>SomeVendor</div><div>flagged</div></div>
+    </div>
+    <p class="reveal" style="margin-top:24px; max-width:70ch; color:var(--text-soft)"><strong style="color:var(--text)">Jurisdiction classification is deliberately conservative.</strong> A row matching both a local and an offshore signature — a genuinely ambiguous case — resolves to <code>unknown</code>, never an automatic pass. A tool whose entire value is catching things that don't belong doesn't get to wave through the cases it isn't sure about.</p>
+  </div>
+</section>
+
+<section id="data-in" style="background:var(--paper-dim)">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow" style="color:var(--brand)">Getting your data in</div>
+      <h2>Three paths, in order of how much trust each deserves.</h2>
+    </div>
+
+    <div class="data-request-card reveal" style="margin-bottom:44px">
+      <h4>Send this to your engineering team</h4>
+      <div class="dr-sub">The exact request that gets you a usable file back on the first try.</div>
+      <p style="font-size:0.87rem; color:var(--text-soft); margin-bottom:16px">Dear Engineering Team,<br>To run the Infosights Data Residency Readiness Scan, please provide a masked CSV file containing data from the following four specific infrastructure sources:</p>
+      <ol>
+        <li><strong>Core Databases (db):</strong> An inventory list of all production and staging database instances, including hosting cloud regions or physical data center zones.</li>
+        <li><strong>System Backups (backups):</strong> A list of all active storage buckets, cold archives, and snapshot destinations used for disaster recovery.</li>
+        <li><strong>API Gateways (api_logs):</strong> A 24-hour log summary showing outward-facing connection endpoints and routing targets.</li>
+        <li><strong>Third-Party Vendors (third_party_calls):</strong> A connection log of external webhooks, identity verification platforms, and international payment processors connected to your ecosystem.</li>
+      </ol>
+      <div class="dr-protocol">
+        <strong>Data hygiene &amp; masking protocol</strong>
+        For security and data privacy compliance, your engineering team should completely sanitize and mask these files before sending them. Redact all internal passwords, cryptographic keys, and customer-identifying data. We only require the structural system names, target URLs, destination IPs, and hosting regions to evaluate CBN compliance alignment.
+      </div>
+      <div class="dr-actions">
+        <button class="copy-btn" id="copyRequestBtn">Copy request text</button>
+        <a class="btn btn-secondary" href="#" id="downloadTemplateBtn">Download infosights_infra_template.csv</a>
+      </div>
+    </div>
+
+    <div class="path-card reveal">
+      <div class="path-card-head"><span class="path-num">1</span><h3>CSV inventory — the primary path</h3></div>
+      <p style="color:var(--text-soft); font-size:0.9rem; margin-bottom:14px">Any cloud or infra team can export an inventory to CSV without engineering help.</p>
+      <div class="code-block" style="padding:16px 20px; font-size:0.8rem"><span class="c1"># starter file with one example row per source</span><br>generate_csv_template(<span class="c2">"inventory.csv"</span>)<br>audit &lt;- scan_from_csv(<span class="c2">"inventory.csv"</span>)</div>
+    </div>
+
+    <div class="path-card reveal">
+      <div class="path-card-head"><span class="path-num">2</span><h3>Direct source calls</h3></div>
+      <p style="color:var(--text-soft); font-size:0.9rem; margin-bottom:14px">Already have structured config in R? Call a scan source directly — all four take the same shape.</p>
+      <div class="code-block" style="padding:16px 20px; font-size:0.8rem">scan_source_db(list(<br>&nbsp;&nbsp;list(item = <span class="c2">"core_banking_db"</span>, provider = <span class="c2">"MainOne"</span>, region = <span class="c2">"Lagos-NG"</span>)<br>))</div>
+    </div>
+
+    <div class="path-card reveal">
+      <div class="path-card-head"><span class="path-num">3</span><h3>Raw code scanning — candidate findings only</h3></div>
+      <p style="color:var(--text-soft); font-size:0.9rem; margin-bottom:14px">If an engineer hands you a Terraform/config repo instead of a CSV, scan it directly for provider/region signatures.</p>
+      <div class="code-block" style="padding:16px 20px; font-size:0.8rem">candidates &lt;- scan_source_files(<span class="c2">"path/to/repo"</span>)</div>
+      <div class="caution"><strong>Read this before a client demo:</strong> every row is tagged <code>confidence = "candidate"</code> and is never registered as an audit source — it can't silently blend into a certified result. Treat it as "worth checking," not "confirmed."</div>
+    </div>
+  </div>
+</section>
+
+<section id="reports">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow" style="color:var(--brand)">The Compliance Readiness Report</div>
+      <h2>The report is the product. The scan is just how we get there.</h2>
+      <p>Your CIO, CISO, Internal Audit, and Risk Management teams don't want raw scan output — they want answers. Every engagement is built to answer four questions, in minutes:</p>
+    </div>
+    <div class="feature-grid reveal" style="margin-bottom:44px">
+      <div class="feature-card"><div class="icon">1</div><h3>What data is outside Nigeria?</h3><p>A clear inventory of every flagged asset, its provider, and its actual location.</p></div>
+      <div class="feature-card"><div class="icon">2</div><h3>Which systems need review?</h3><p>Grouped by source — databases, API traffic, backups, vendor connections.</p></div>
+      <div class="feature-card"><div class="icon">3</div><h3>What evidence has been collected?</h3><p>A dated, verdict-scored report suitable for internal audit and board review.</p></div>
+      <div class="feature-card"><div class="icon">4</div><h3>What should happen before the deadline?</h3><p>A numbered remediation list — exactly which assets need to move, and where.</p></div>
+    </div>
+    <div class="report-compare">
+      <div class="report-card reveal">
+        <div class="rc-head">Markdown certificate</div>
+        <div class="rc-body">
+          <code>gen_residency_certificate()</code>
+          <p style="margin-top:12px">Plain-text output for engineers and version control. Verdict line, dynamic executive summary, per-source breakdown, numbered remediation list.</p>
+          <div class="rc-tags"><span>diffable</span><span>terminal-friendly</span><span>version-controllable</span></div>
+        </div>
+      </div>
+      <div class="report-card reveal">
+        <div class="rc-head">PDF certificate</div>
+        <div class="rc-body">
+          <code>gen_residency_certificate_pdf()</code>
+          <p style="margin-top:12px">Board-ready: jurisdiction donut chart, per-source bar chart, color-coded item table, automatic pagination. Built on base R graphics — no rmarkdown, no pandoc, no LaTeX.</p>
+          <div class="rc-tags"><span>base R graphics</span><span>charts included</span><span>print-ready</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="reveal" style="margin-top:28px; max-width:70ch; color:var(--text-soft)">Both cite a regulatory basis via a <code>regulation</code> parameter — swap the citation, deadline, or regulator name without touching a line of logic. It's the reason this tool doesn't expire when the January 2027 deadline passes.</p>
+  </div>
+</section>
+
+<section style="background:var(--paper-dim)">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow" style="color:var(--brand)">Interpreting results</div>
+      <h2>Three verdicts. No ambiguity about what they mean.</h2>
+    </div>
+    <div class="verdict-row">
+      <div class="verdict-card ok reveal"><div class="vtitle">COMPLIANT</div><p>No offshore or unknown items found in this audit.</p></div>
+      <div class="verdict-card bad reveal"><div class="vtitle">NON-COMPLIANT</div><p>At least one flagged item — see the remediation list.</p></div>
+      <div class="verdict-card unk reveal"><div class="vtitle">UNKNOWN</div><p>No data was audited — check your config before trusting this result.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="limitations" class="dark" style="background:var(--ink)">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow" style="color:var(--brand-bright)">Limitations, stated plainly</div>
+      <h2>The parts that still need a human.</h2>
+      <p>A tool that hides its own rough edges is the fastest way to get contradicted in a live demo.</p>
+    </div>
+    <div class="limit-list">
+      <div class="limit-item reveal"><div class="mark">＊</div><div><h3>Accuracy depends on input quality</h3><p>The tool classifies whatever provider/region text it's given. There is no independent verification against actual cloud infrastructure.</p></div></div>
+      <div class="limit-item reveal"><div class="mark">＊</div><div><h3>The code scanner is a heuristic, not an audit</h3><p>It's for triage before building a real CSV inventory — not a certification source.</p></div></div>
+      <div class="limit-item reveal"><div class="mark">＊</div><div><h3>No live cloud API integration, by design</h3><p>This is what makes the "runs on an air-gapped laptop" claim true. It also means residencyR never confirms your data reflects current reality — that's on your process.</p></div></div>
+      <div class="limit-item reveal"><div class="mark">＊</div><div><h3>Terraform state (.tfstate) parsing isn't built</h3><p>Plain-text .tf files are supported today; .tfstate is JSON and would require a dependency that hasn't been added.</p></div></div>
+      <div class="limit-item reveal"><div class="mark">＊</div><div><h3>Indicator lists aren't exhaustive</h3><p>Local and offshore provider signatures are a working set, verified as they're added — not a complete registry of every provider that exists.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" style="background:var(--paper)">
+  <div class="wrap">
+    <div class="section-head reveal" style="text-align:center; margin-left:auto; margin-right:auto">
+      <div class="eyebrow" style="color:var(--brand); justify-content:center; display:flex">Pricing</div>
+      <h2>Priced for procurement and audit, not for a dev tool.</h2>
+      <p style="margin:0 auto">A Compliance Readiness Assessment to establish your position, an Enterprise license for ongoing coverage, and an Advisory tier for audit firms and multi-entity groups.</p>
+    </div>
+
+    <div class="pricing-grid reveal">
+      <div class="price-card" data-plan="assessment">
+        <h3>Compliance Readiness Assessment</h3>
+        <div class="price-sub">One-time engagement, establishes your current position</div>
+        <div class="amount">₦2,500,000 <span class="per">one-time</span></div>
+        <ul>
+          <li>Full infrastructure scan &amp; gap analysis</li>
+          <li>Executive-ready compliance readiness report</li>
+          <li>Recommended first step before an annual license</li>
+        </ul>
+        <button class="btn btn-primary paystack-btn" data-plan="assessment">Book Assessment</button>
+      </div>
+
+      <div class="price-card featured" data-plan="enterprise">
+        <h3>Enterprise Compliance License</h3>
+        <div class="price-sub">Ongoing coverage for banks &amp; PSPs</div>
+        <div class="amount">₦5M&ndash;₦7.5M <span class="per">/year</span></div>
+        <ul>
+          <li>Unlimited scans &amp; readiness reports</li>
+          <li>Auto-renewing license, no manual reissue</li>
+          <li>Priority support through your compliance cycle</li>
+        </ul>
+        <a class="btn btn-primary" href="tel:08101688661">Request a Proposal</a>
+      </div>
+
+      <div class="price-card" data-plan="partner">
+        <h3>Partner &amp; Advisory License</h3>
+        <div class="price-sub">Audit firms &amp; multi-entity groups</div>
+        <div class="amount">₦15M&ndash;₦20M <span class="per">/year</span></div>
+        <ul>
+          <li>Coverage across multiple client institutions</li>
+          <li>On-premise implementation available</li>
+          <li>Co-branded reporting for advisory engagements</li>
+        </ul>
+        <a class="btn btn-secondary" href="tel:08101688661">Talk to Us</a>
+      </div>
+    </div>
+    <p class="price-note">Prices shown are a starting point for discussion, not final published rates.</p>
+
+    <div class="reveal" style="margin-top:56px">
+      <h3 style="font-size:1.1rem; margin-bottom:16px; text-align:center">Professional services</h3>
+      <table class="services-table">
+        <thead><tr><th>Service</th><th>Suggested fee</th></tr></thead>
+        <tbody>
+          <tr><td>On-site implementation</td><td>₦1M&ndash;₦3M</td></tr>
+          <tr><td>Staff training</td><td>₦500k&ndash;₦2M</td></tr>
+          <tr><td>Custom reporting</td><td>By quotation</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="liability-note"><strong style="color:var(--text)">A note on scope:</strong> the platform helps institutions identify potential data residency issues early and produce evidence that supports internal compliance and audit activities. Final regulatory compliance remains the institution's responsibility.</p>
+    <p class="price-note">Prices shown are a starting point for discussion, not final published rates. Naira amounts shown for illustration.</p>
+
+    <div class="install-cta reveal">
+      <div>
+        <h3>Need on-premise installation?</h3>
+        <p>Some banks prefer someone on-site for setup and a live walkthrough rather than self-serve activation. We can arrange that directly.</p>
+      </div>
+      <a href="tel:08101688661" class="phone"><span>Call Infosights Consulting</span>08101688661</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-notice">
+      <strong>Independence notice:</strong> residencyR is an independent, third-party auditing tool. It is not issued by, endorsed by, or affiliated with the Central Bank of Nigeria or any other regulator. Every certificate it generates states this explicitly.
+    </div>
+    <div class="footer-grid">
+      <div>
+        <h4>residencyR</h4>
+        <p style="font-size:0.87rem; max-width:32ch">Data residency auditing and compliance reporting, built entirely on base R.</p>
+      </div>
+      <div>
+        <h4>Docs</h4>
+        <ul><li><a href="#quickstart">Quick start</a></li><li><a href="/docs/articles/data-sourcing-guide.html">Data sourcing guide</a></li><li><a href="/docs/reference/index.html">Reference index</a></li></ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul><li><a href="https://github.com/laws2020/residencyR" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://github.com/laws2020/residencyR/issues" target="_blank" rel="noopener">Issues</a></li><li><a href="https://github.com/laws2020/residencyR/releases" target="_blank" rel="noopener">Changelog</a></li></ul>
+      </div>
+      <div>
+        <h4>Install</h4>
+        <div class="mono" style="font-size:0.78rem; background:var(--ink-2); padding:10px 12px; border-radius:5px; border:1px solid var(--ink-line)">remotes::install_github(<br>"laws2020/residencyR")</div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>residencyR v0.1.0 · MIT License</span>
+      <span>Independent audit tooling — not government-issued or endorsed</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script>
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  // ---------------- Data request letter: copy + template download ----------------
+  const REQUEST_TEXT = `Dear Engineering Team,
+
+To run the Infosights Data Residency Readiness Scan, please provide a masked CSV file containing data from the following four specific infrastructure sources:
+
+1. Core Databases (db): An inventory list of all production and staging database instances (including hosting cloud regions or physical data center zones).
+2. System Backups (backups): A list of all active storage buckets, cold archives, and snapshot destinations used for disaster recovery.
+3. API Gateways (api_logs): A 24-hour log summary showing outward-facing connection endpoints and routing targets.
+4. Third-Party Vendors (third_party_calls): A connection log of external webhooks, identity verification platforms, and international payment processors connected to your ecosystem.
+
+Data Hygiene & Masking Protocol:
+For security and data privacy compliance, your engineering team should completely sanitize and mask these files before sending them to Infosights. Please redact all internal passwords, cryptographic keys, and customer-identifying data. We only require the structural system names, target URLs, destination IPs, and hosting regions to evaluate your CBN compliance alignment.
+
+(Attached is our infosights_infra_template.csv showing the exact column structure required.)`;
+
+  const copyBtn = document.getElementById('copyRequestBtn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(REQUEST_TEXT).then(() => {
+        const original = copyBtn.textContent;
+        copyBtn.textContent = 'Copied ✓';
+        setTimeout(() => { copyBtn.textContent = original; }, 2000);
+      }).catch(() => alert('Could not copy automatically -- please select and copy the text manually.'));
+    });
+  }
+
+  const downloadBtn = document.getElementById('downloadTemplateBtn');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Matches generate_csv_template()'s real output exactly -- one example row per source.
+      const csv = 'source,item,provider,region\n' +
+        'db,core_banking_db,MainOne,Lagos-NG\n' +
+        'api_logs,fraud_scoring_api,AWS,eu-west-1\n' +
+        'backups,dr_snapshot,Azure,West Europe (Netherlands)\n' +
+        'third_party_calls,chargeback_processor,Stripe,us-east-1\n';
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'infosights_infra_template.csv';
+      a.click();
+    });
+  }
+
+  // ---------------- Paystack checkout ----------------
+  // Replace with your real Paystack PUBLIC key (starts with pk_live_ or pk_test_).
+  // NEVER put your SECRET key anywhere in this file or any frontend code.
+  const PAYSTACK_PUBLIC_KEY = "pk_test_REPLACE_WITH_YOUR_PUBLIC_KEY";
+
+  // Point this at your deployed licensing backend (see dev/licensing-backend/server.js).
+  const LICENSING_BACKEND_URL = "https://your-backend.example.com";
+
+  document.querySelectorAll(".paystack-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const plan = btn.dataset.plan; // only "assessment" reaches this handler now
+      const email = window.prompt("Enter the email to receive the license and receipt:");
+      if (!email) return;
+      const bankName = window.prompt("Institution name (as it should appear on the report):");
+      if (!bankName) return;
+
+      const handler = PaystackPop.setup({
+        key: PAYSTACK_PUBLIC_KEY,
+        email: email,
+        amount: 250000000, // NGN 2,500,000 in kobo -- Compliance Readiness Assessment, fixed fee
+        currency: "NGN",
+        metadata: { bank_name: bankName, plan: plan },
+        callback: function (response) {
+          // Payment succeeded client-side -- now verify server-side before
+          // trusting it. Never issue a license from the client callback alone.
+          fetch(`${LICENSING_BACKEND_URL}/verify-and-issue`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reference: response.reference, plan: plan }),
+          })
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.success) {
+                const blob = new Blob([data.license], { type: "text/plain" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = "residencyR-license.lic";
+                a.click();
+                alert("Payment confirmed. Your access has downloaded -- install it with install_license(). Our team will also follow up directly to schedule the assessment.");
+              } else {
+                alert("Payment received, but access issuance failed: " + data.error + ". Contact support with reference " + response.reference + ".");
+              }
+            })
+            .catch(() => {
+              alert("Payment received, but we could not reach the licensing server. Contact support with reference " + response.reference + ".");
+            });
+        },
+        onClose: function () {},
+      });
+      handler.openIframe();
+    });
+  });
+</script>
+
+</body>
+</html>
